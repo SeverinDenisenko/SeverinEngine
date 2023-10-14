@@ -1,0 +1,9 @@
+[submodule "deps/fmt"]
+	path = deps/fmt
+	url = https://github.com/severin-denisenko/fmt.git
+[submodule "deps/entt"]
+	path = deps/entt
+	url = https://github.com/severin-denisenko/entt.git
+[submodule "deps/SDL"]
+	path = deps/SDL
+	url = https://github.com/severin-denisenko/SDL.git
