@@ -38,12 +38,14 @@ public:
             SDL_SetWindowFullscreen(window, SDL_TRUE);
             SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
-            const SDL_DisplayMode* DM = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(window));
-            if (!DM) {
+            const SDL_DisplayMode* mode
+                = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(window));
+            if (!mode) {
                 FATAL("DisplayMode is unavalable");
             }
-            w = DM->w;
-            h = DM->h;
+            float scale = mode->pixel_density;
+            w = mode->w * scale;
+            h = mode->h * scale;
 
             SDL_SetWindowSize(window, w, h);
             SDL_RestoreWindow(window);
@@ -62,12 +64,19 @@ public:
         return { w, h };
     }
 
+    vector_uint2 getPosition()
+    {
+        return { (uint32_t)x, (uint32_t)y };
+    }
+
     friend class GameRenderer;
 
 private:
     SDL_Window* window { nullptr };
     uint32_t w;
     uint32_t h;
+    int x;
+    int y;
 };
 
 } // namespace se
