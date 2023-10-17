@@ -4,6 +4,7 @@
 #include "event_system.hpp"
 #include "game_renderer.hpp"
 #include "game_window.hpp"
+#include "keyboard.hpp"
 
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
@@ -45,17 +46,40 @@ private:
     bool exited_ = false;
 };
 
-struct Square {
-    AAPLVertex vertices[6] = {
-        // 2D positions,    RGBA colors
-        { { 10, 10 }, { 1, 1, 1, 1 } },
-        { { 10, -10 }, { 1, 1, 1, 1 } },
-        { { -10, -10 }, { 1, 1, 1, 1 } },
-        { { -10, 10 }, { 1, 1, 1, 1 } },
-        { { 10, 10 }, { 1, 1, 1, 1 } },
-        { { -10, -10 }, { 1, 1, 1, 1 } }
-    };
+class Square {
+public:
+    Square(se::Keyboard& keyboard, se::Clock& clock)
+        : keyboard(keyboard)
+        , clock(clock)
+    {
+    }
 
+    void update()
+    {
+        float delta = clock.delta();
+        float distance = 1.0 * delta;
+        if (keyboard.hold(se::Key('w')))
+            move(0, distance);
+        if (keyboard.hold(se::Key('s')))
+            move(0, -distance);
+        if (keyboard.hold(se::Key('a')))
+            move(-distance, 0);
+        if (keyboard.hold(se::Key('d')))
+            move(distance, 0);
+    }
+
+    AAPLVertex vertices[6]
+        = {
+              // 2D positions,    RGBA colors
+              { { 10, 10 }, { 1, 1, 1, 1 } },
+              { { 10, -10 }, { 1, 1, 1, 1 } },
+              { { -10, -10 }, { 1, 1, 1, 1 } },
+              { { -10, 10 }, { 1, 1, 1, 1 } },
+              { { 10, 10 }, { 1, 1, 1, 1 } },
+              { { -10, -10 }, { 1, 1, 1, 1 } }
+          };
+
+private:
     void move(float x, float y)
     {
         for (size_t i = 0; i < 6; i++) {
@@ -63,36 +87,8 @@ struct Square {
             vertices[i].position[1] += y;
         }
     }
-};
 
-class MoveListner : public se::EventListner {
-public:
-    MoveListner(Square& square, se::Clock& clock)
-        : square(square)
-        , clock(clock)
-    {
-    }
-
-    virtual void listen(SDL_Event& event) override
-    {
-        float delta = clock.delta();
-        float distance = 10.0 * delta;
-        if (event.type == SDL_EVENT_KEY_DOWN && event.key.keysym.sym == SDLK_w) {
-            square.move(0, distance);
-        }
-        if (event.type == SDL_EVENT_KEY_DOWN && event.key.keysym.sym == SDLK_s) {
-            square.move(0, -distance);
-        }
-        if (event.type == SDL_EVENT_KEY_DOWN && event.key.keysym.sym == SDLK_a) {
-            square.move(-distance, 0);
-        }
-        if (event.type == SDL_EVENT_KEY_DOWN && event.key.keysym.sym == SDLK_d) {
-            square.move(distance, 0);
-        }
-    }
-
-private:
-    Square& square;
+    se::Keyboard& keyboard;
     se::Clock& clock;
 };
 
@@ -100,8 +96,9 @@ int main(int argc, char** argv)
 {
     se::GameWindow gameWindow(true);
     se::GameRenderer gameRenderer(gameWindow);
-    se::Clock clock;
     se::EventSystem eventSystem;
+    se::Clock clock;
+    se::Keyboard keyboard(eventSystem);
 
     DEFINE_LIBRARY(triangle, gameRenderer);
 
@@ -110,20 +107,17 @@ int main(int argc, char** argv)
 
     se::PipelineId pipeline = gameRenderer.createPipeline(vertex, fragment);
 
-    Square player;
+    Square player(keyboard, clock);
 
     auto exit_listner = std::make_shared<ExitLister>();
-    auto move_listner = std::make_shared<MoveListner>(player, clock);
-    eventSystem.addListner(exit_listner, SDL_EVENT_QUIT);
-    eventSystem.addListner(exit_listner, SDL_EVENT_KEY_DOWN);
-    eventSystem.addListner(move_listner, SDL_EVENT_KEY_DOWN);
-
-    float w = gameWindow.getViewport()[0];
-    float h = gameWindow.getViewport()[1];
+    eventSystem.addListner(exit_listner, se::Events::Quit);
+    eventSystem.addListner(exit_listner, se::Events::KeyDown);
 
     while (!exit_listner->exited()) {
-        clock.update();
         eventSystem.processEvents();
+        clock.update();
+
+        player.update();
 
         gameRenderer.beginFrame();
         gameRenderer.drawVertices(player.vertices, 6, pipeline);

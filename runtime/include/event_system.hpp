@@ -1,3 +1,5 @@
+#pragma once
+
 #include <SDL3/SDL.h>
 
 #include <memory>
@@ -5,29 +7,40 @@
 #include <vector>
 
 namespace se {
+
+using Event = SDL_Event;
+
+enum class Events {
+    KeyDown = SDL_EVENT_KEY_DOWN,
+    KeyUp = SDL_EVENT_KEY_UP,
+    Quit = SDL_EVENT_QUIT
+};
+
 class EventListner {
 public:
-    virtual void listen(SDL_Event& event) = 0;
+    virtual void listen(Event& event) = 0;
 };
 
 class EventSystem {
 public:
     void processEvents()
     {
-        SDL_Event e;
+        Event event;
 
-        while (SDL_PollEvent(&e) != 0) {
-            for (auto listner : listners_[e.type])
-                listner->listen(e);
+        while (SDL_PollEvent(&event) != 0) {
+            auto type = Events(event.type);
+
+            for (auto listner : listners_[type])
+                listner->listen(event);
         }
     }
 
-    void addListner(std::shared_ptr<EventListner> listner, Uint32 event_type)
+    void addListner(std::shared_ptr<EventListner> listner, Events event_type)
     {
         listners_[event_type].push_back(listner);
     }
 
 private:
-    std::unordered_map<Uint32, std::vector<std::shared_ptr<EventListner>>> listners_;
+    std::unordered_map<Events, std::vector<std::shared_ptr<EventListner>>> listners_;
 };
 } // namespace se
